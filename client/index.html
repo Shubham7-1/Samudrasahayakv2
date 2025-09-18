@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#3b82f6" />
+    
+    <!-- SEO Meta Tags -->
+    <title>Samudra Sahayak - Smart Fishing Assistant for Indian Fishermen</title>
+    <meta name="description" content="Samudra Sahayak helps coastal fishermen in India fish smarter with weather alerts, fishing zone predictions, GPS navigation, and AI chatbot support. Stay safe and catch more fish." />
+    <meta name="keywords" content="fishing app, coastal fishermen, weather alerts, fishing zones, GPS navigation, India, marine safety" />
+    <meta name="author" content="Samudra Tech" />
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Samudra Sahayak - Smart Fishing Assistant" />
+    <meta property="og:description" content="AI-powered fishing assistant helping coastal fishermen in India stay safe and catch more fish with real-time weather data and smart recommendations." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Samudra Sahayak" />
+    
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Samudra Sahayak - Smart Fishing Assistant" />
+    <meta name="twitter:description" content="AI-powered fishing assistant for coastal fishermen in India" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <!-- Font Preloads -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous">
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
+    
+    <!-- Disable zoom on inputs for iOS -->
+    <style>
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+      
+      /* Prevent iOS bounce scroll */
+      body {
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      /* Custom CSS variables for theme colors */
+      :root {
+        --primary-color: #3b82f6;
+        --secondary-color: #0891b2;
+        --accent-color: #fbbf24;
+        --background-color: #fafbff;
+        --text-color: #1e293b;
+        --border-color: #e2e8f0;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --primary-color: #60a5fa;
+          --secondary-color: #22d3ee;
+          --accent-color: #fcd34d;
+          --background-color: #0f172a;
+          --text-color: #f8fafc;
+          --border-color: #334155;
+        }
+      }
+      
+      /* Loading screen */
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        color: white;
+      }
+      
+      .loading-screen .logo {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        animation: pulse 2s infinite;
+      }
+      
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+      <div class="logo">
+        <i class="fas fa-anchor text-3xl"></i>
+      </div>
+      <h1 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">Samudra Sahayak</h1>
+      <p style="opacity: 0.9;">Smart Fishing Assistant</p>
+      <div style="margin-top: 2rem;">
+        <i class="fas fa-spinner fa-spin text-xl"></i>
+      </div>
+    </div>
+
+    <!-- App Root -->
+    <div id="root"></div>
+    
+    <!-- App Initialization Script -->
+    <script>
+      // Hide loading screen once React app is mounted
+      function hideLoadingScreen() {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          loadingScreen.style.opacity = '0';
+          loadingScreen.style.transition = 'opacity 0.5s ease-out';
+          setTimeout(() => {
+            loadingScreen.remove();
+          }, 500);
+        }
+      }
+      
+      // Check if React app has loaded
+      function checkAppLoaded() {
+        const root = document.getElementById('root');
+        if (root && root.children.length > 0) {
+          hideLoadingScreen();
+        } else {
+          setTimeout(checkAppLoaded, 100);
+        }
+      }
+      
+      // Start checking once DOM is loaded
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(checkAppLoaded, 500);
+      });
+      
+      // Fallback - hide after maximum 5 seconds
+      setTimeout(hideLoadingScreen, 5000);
+      
+      // Add offline/online event listeners
+      window.addEventListener('online', () => {
+        document.body.classList.remove('offline');
+        // Show online notification if needed
+      });
+      
+      window.addEventListener('offline', () => {
+        document.body.classList.add('offline');
+        // Show offline notification if needed
+      });
+      
+      // Disable pull-to-refresh only at the very top
+      let startY = 0;
+      
+      document.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+      
+      document.addEventListener('touchmove', (e) => {
+        const currentY = e.touches[0].clientY;
+        
+        // Only prevent pull-to-refresh if at top of page and pulling down
+        if (window.scrollY === 0 && currentY > startY && startY < 50) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+    </script>
+    
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Replit Development Banner -->
+    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
+  </body>
+</html>

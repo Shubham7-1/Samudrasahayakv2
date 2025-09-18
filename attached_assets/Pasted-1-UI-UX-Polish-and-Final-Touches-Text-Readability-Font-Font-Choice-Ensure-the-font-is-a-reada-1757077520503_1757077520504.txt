@@ -1,0 +1,114 @@
+1. UI/UX Polish and Final Touches:
+Text Readability & Font:
+
+Font Choice: Ensure the font is a readable sans-serif like Roboto, Inter, or Open Sans for optimal screen legibility.
+
+Font Weight & Contrast:
+
+Use Medium or Semi-Bold font weights for headings and important text like "34°C".
+
+Ensure text is high contrast, especially on dark backgrounds.
+
+Avoid overly grayed-out text; it should be clear and easily readable.
+
+Alignment:
+
+Double-check all text and icon alignments.
+
+For example, in the Current Weather card, align the text (Humidity, Pressure, etc.) and their values in their respective columns.
+
+Icons:
+
+Add weather icons to represent details like Humidity, Pressure, Visibility, and Tide Level to improve scannability.
+
+Add icons for each weather condition (e.g., 🌡️ for temperature, 💧 for humidity).
+
+Bottom Navigation Bar:
+
+Ensure the "active" tab icon (e.g., "Catch" in yellow) is clearly distinct from the inactive ones.
+
+Consistency:
+
+Maintain consistent button styles, colors, and font sizes across all screens for a smooth user experience.
+
+2. Functional Enhancements:
+User Profile Screen:
+
+Add Profile Photo:
+
+Include a circular placeholder above the "Fisherman" title with a camera or plus icon to allow the user to upload a photo.
+
+For now, display a pre-loaded photo for the prototype.
+
+Language Selection:
+
+Add a Language option on the profile screen.
+
+When tapped, it should lead back to the language selection screen that was previously built.
+
+Indicate that users can change the language anytime after the initial setup.
+
+Location Permissions & Map:
+
+Show live location (blue dot) on the map when the user grants location permission.
+
+Enhance the map with some coastal outlines or sea depth indications to make it look more realistic.
+
+Catch Log:
+
+Populate Catch Log:
+
+Pre-fill the Catch Log with 3-4 fictional entries for demonstration purposes. Each entry should include:
+
+A photo of the fish.
+
+Species name (e.g., "Mackerel").
+
+Weight (e.g., 2.5kg).
+
+Time and location (mini-map).
+
+Emergency & Safety:
+
+Simulate an SOS Call action by showing a pop-up like "Dialing Coast Guard (1554)..."
+
+For Border Alert, show the distance changing as the boat moves closer to a simulated border.
+
+3. Information Clarity:
+Weather Forecast Icons:
+
+The current colored dots (green and orange) are not very clear.
+
+Add a Legend at the top/bottom of the screen:
+
+🟢 Green: Good fishing conditions.
+
+🟠 Orange: Moderate fishing conditions.
+
+🔴 Red: Poor fishing conditions.
+
+4. 
+Language Selection Screen:
+
+
+Next to each circle, chnage a colored circle to represent each language's color scheme:
+
+English: Add a black circle (#0078D4).
+
+Hindi : Add an brown circle (#FF5722).
+
+Language Accessibility After Login:
+
+Ensure that language translation is accessible after login, allowing users to change the language from the top-right corner.
+
+Ensure full screen translation based on the user-selected language.
+
+Every word on the screen (titles, buttons, labels) should change according to the selected language.
+
+Implement a language toggle that updates all text elements dynamically without requiring a restart of the app.
+
+Cached Fish Entry with Date Selection:
+
+Add Date Selection: In the Catch Log, provide a date picker for users to view their past catches based on a specific date.
+
+The fisherman should be able to see the date of previous catches along with the other details (e.g., fish species, weight, and location).

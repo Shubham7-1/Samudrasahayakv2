@@ -1,0 +1,229 @@
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { useGeolocation } from '@/hooks/use-geolocation';
+import { FISH_TYPES } from '@/lib/constants';
+import { Skeleton } from '@/components/ui/skeleton';
+import { db } from '@/firebase';
+import { collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore';
+
+export function CatchLog() {
+  const [isAddingCatch, setIsAddingCatch] = useState(false);
+  const [formData, setFormData] = useState({
+    fishType: '',
+    quantity: '',
+    weight: '',
+    price: '',
+    notes: ''
+  });
+
+  const { latitude, longitude } = useGeolocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch catches from Firestore
+  const { data: catches, isLoading } = useQuery({
+    queryKey: ['catchLogs'],
+    queryFn: async () => {
+      const q = query(collection(db, 'catch-logs'), orderBy('timestamp', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Add new catch to Firestore
+  const addCatchMutation = useMutation({
+    mutationFn: async (catchData: any) => {
+      const docRef = await addDoc(collection(db, 'catch-logs'), {
+        ...catchData,
+        timestamp: Date.now()
+      });
+      return docRef;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Catch Logged",
+        description: "Your catch has been recorded successfully.",
+      });
+      setIsAddingCatch(false);
+      setFormData({ fishType: '', quantity: '', weight: '', price: '', notes: '' });
+      queryClient.invalidateQueries({ queryKey: ['catchLogs'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to log catch. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.fishType || !formData.weight) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in fish type and weight.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const userPhone = localStorage.getItem('userPhone') || localStorage.getItem('loginPhoneNumber') || 'guest';
+
+    addCatchMutation.mutate({
+      fishType: formData.fishType,
+      quantity: parseFloat(formData.quantity) || 1,
+      weight: parseFloat(formData.weight),
+      price: parseFloat(formData.price) || 0,
+      notes: formData.notes,
+      location: latitude && longitude ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : 'Current Location',
+      latitude: latitude || 0,
+      longitude: longitude || 0,
+      userId: userPhone,
+      weatherConditions: {} // optional
+    });
+  };
+
+  const calculateStats = () => {
+    if (!catches || !Array.isArray(catches)) return { totalWeight: 0, totalValue: 0, totalCatches: 0 };
+    return catches.reduce((acc: any, c: any) => ({
+      totalWeight: acc.totalWeight + (c.weight || 0),
+      totalValue: acc.totalValue + (c.price || 0),
+      totalCatches: acc.totalCatches + 1
+    }), { totalWeight: 0, totalValue: 0, totalCatches: 0 });
+  };
+
+  const stats = calculateStats();
+
+  if (isLoading) {
+    return (
+      <div className="p-4 pb-20 space-y-6">
+        <Card>
+          <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
+          <CardContent className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 pb-20 space-y-6 overflow-auto ios-scroll">
+      {/* Header Stats */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center"><i className="fas fa-fish mr-2 text-primary" />Catch Log</CardTitle>
+            <Button onClick={() => setIsAddingCatch(!isAddingCatch)}>
+              <i className="fas fa-plus mr-2" />{isAddingCatch ? 'Cancel' : 'Add Catch'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-primary">{stats.totalCatches}</div>
+              <div className="text-sm text-muted-foreground">Total Catches</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-secondary">{stats.totalWeight.toFixed(1)}kg</div>
+              <div className="text-sm text-muted-foreground">Total Weight</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-green-600">₹{stats.totalValue.toFixed(0)}</div>
+              <div className="text-sm text-muted-foreground">Total Value</div>
+            </div>
+          </div>
+
+          {/* Add Catch Form */}
+          {isAddingCatch && (
+            <Card className="border-primary">
+              <CardHeader><CardTitle className="text-lg">Log New Catch</CardTitle></CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="fishType">Fish Type *</Label>
+                      <Select value={formData.fishType} onValueChange={v => setFormData(prev => ({ ...prev, fishType: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Select fish type" /></SelectTrigger>
+                        <SelectContent>{FISH_TYPES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="weight">Weight (kg) *</Label>
+                      <Input id="weight" type="number" step="0.1" value={formData.weight} onChange={e => setFormData(prev => ({ ...prev, weight: e.target.value }))} placeholder="0.0" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="quantity">Quantity (pieces)</Label>
+                      <Input id="quantity" type="number" value={formData.quantity} onChange={e => setFormData(prev => ({ ...prev, quantity: e.target.value }))} placeholder="1" />
+                    </div>
+                    <div>
+                      <Label htmlFor="price">Price (₹)</Label>
+                      <Input id="price" type="number" step="0.01" value={formData.price} onChange={e => setFormData(prev => ({ ...prev, price: e.target.value }))} placeholder="0.00" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="notes">Notes (optional)</Label>
+                    <Textarea id="notes" value={formData.notes} onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="Add notes..." rows={3} />
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={addCatchMutation.isPending}>
+                    {addCatchMutation.isPending ? <>Saving...</> : <>Save Catch</>}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Catch History */}
+      <Card>
+        <CardHeader><CardTitle>Recent Catches</CardTitle></CardHeader>
+        <CardContent>
+          {!catches || catches.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <i className="fas fa-fish text-4xl mb-4 opacity-50" />
+              <p>No catches recorded yet</p>
+              <p className="text-sm mt-2">Start logging your catches to track your progress!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {catches.map((c: any, idx: number) => (
+                <Card key={c.id || idx} className="border">
+                  <CardContent className="p-4 flex justify-between items-center">
+                    <div>
+                      <h4 className="font-semibold">{c.fishType}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {c.timestamp ? new Date(c.timestamp).toLocaleString('en-IN') : 'Recent'}
+                      </p>
+                      {c.notes && <p className="text-sm mt-1">{c.notes}</p>}
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold">{c.weight}kg</div>
+                      {c.price > 0 && <div className="text-sm text-green-600">₹{c.price}</div>}
+                      {c.quantity && c.quantity !== 1 && <div className="text-xs">{c.quantity} pcs</div>}
+                      {c.location && <div className="text-xs text-muted-foreground">{c.location}</div>}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

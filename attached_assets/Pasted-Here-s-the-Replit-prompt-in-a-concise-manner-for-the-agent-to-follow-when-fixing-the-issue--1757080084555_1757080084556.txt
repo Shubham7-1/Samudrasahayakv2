@@ -1,0 +1,83 @@
+Here’s the **Replit prompt** in a concise manner for the agent to follow when fixing the issue:
+
+---
+
+### **Replit Prompt to Fix `useRef` Issue (with Hot Reload)**
+
+1. **Check `useRef` Initialization:**
+
+   * Ensure that `useRef` is correctly initialized and accessed only after the component has mounted.
+
+   Example:
+
+   ```jsx
+   import React, { useEffect, useRef } from 'react';
+
+   function MyComponent() {
+     const myRef = useRef(null);
+
+     useEffect(() => {
+       if (myRef.current) {
+         console.log(myRef.current); // Safely access myRef after mount
+       }
+     }, []); // Runs only once after the component mounts
+
+     return <div ref={myRef}>Content</div>;
+   }
+
+   export default MyComponent;
+   ```
+
+2. **Handle Hot Module Replacement (HMR) Issues:**
+
+   * Ensure that state and refs are correctly initialized after a hot reload. React hooks should be checked to make sure they are initialized correctly.
+
+3. **Optional: Disable Vite Error Overlay Temporarily:**
+
+   * Add this to your `vite.config.js` to disable the error overlay during development:
+
+   ```js
+   export default {
+     server: {
+       hmr: {
+         overlay: false,  // Disables the error overlay during development
+       },
+     },
+   };
+   ```
+
+4. **Clear Browser Cache and Restart App:**
+
+   * Perform a **hard refresh** (Ctrl + Shift + R) in the browser to clear the cache.
+   * Run `npm run dev` or `yarn dev` in the **Replit terminal** to restart the app.
+
+5. **Check Console for Errors:**
+
+   * Open the browser **developer tools** (F12), go to the **Console** and **Network** tabs.
+   * Look for any errors related to `useRef`, module loading, or component mounting.
+
+6. **Optional: Add Safe Ref Check Logic:**
+
+   * If you have conditional rendering, ensure you check the ref before accessing it.
+
+   ```jsx
+   useEffect(() => {
+     if (myRef.current) {
+       // Safely access myRef.current
+     }
+   }, []);
+   ```
+
+---
+
+**Commands to run on Replit:**
+
+* In the Replit **terminal**, run:
+
+  ```bash
+  npm run dev   # or yarn dev if you're using Yarn
+  ```
+
+---
+
+By following these steps, the issue should be resolved. Let me know if further assistance is needed!

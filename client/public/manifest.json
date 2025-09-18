@@ -1,0 +1,20 @@
+{
+  "name": "Samudra Sahayak - Smart Fishing Assistant",
+  "short_name": "Samudra Sahayak",
+  "description": "AI-powered fishing assistant for coastal fishermen in India",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#3b82f6",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["navigation", "productivity", "utilities"],
+  "lang": "en",
+  "screenshots": []
+}
