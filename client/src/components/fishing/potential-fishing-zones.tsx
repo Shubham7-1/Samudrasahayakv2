@@ -38,8 +38,23 @@ export function PotentialFishingZones({ onZoneSelect }: PFZProps) {
   const queryLon = useCustomLocation && customLon ? parseFloat(customLon) : longitude;
 
   const { data: fishingZones, isLoading, error, refetch } = useQuery<FishingZone[]>({
-    queryKey: ['/api/fishing-zones/potential', queryLat, queryLon],
+    queryKey: ['fishing-zones-potential', queryLat, queryLon],
+    queryFn: async () => {
+      if (!queryLat || !queryLon) return [];
+      
+      const response = await fetch(
+        `/api/fishing-zones/potential?lat=${queryLat}&lon=${queryLon}&radius=50`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
+    },
     enabled: !!(queryLat && queryLon),
+    refetchInterval: 300000, // Refetch every 5 minutes for real-time updates
+    staleTime: 240000, // Consider data stale after 4 minutes
   });
 
   const handleLocationSubmit = () => {
@@ -171,6 +186,12 @@ export function PotentialFishingZones({ onZoneSelect }: PFZProps) {
           <div className="text-center py-4 text-red-500">
             <AlertCircle className="w-6 h-6 mx-auto mb-2" />
             <p className="text-xs">Failed to load zones</p>
+            <button 
+              onClick={() => refetch()}
+              className="text-xs underline mt-1 hover:text-red-400"
+            >
+              Retry
+            </button>
           </div>
         )}
 
