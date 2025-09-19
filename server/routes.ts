@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { weatherService } from "./services/weather";
 import { geminiService } from "./services/gemini";
+import { OceanographicService } from "./services/oceanographic";
+
+const oceanographicService = new OceanographicService();
 import { 
   insertWeatherDataSchema, 
   insertCatchLogSchema, 
@@ -68,6 +71,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Fishing zones error:', error);
       res.status(500).json({ error: "Failed to fetch fishing zones" });
+    }
+  });
+
+  // Potential Fishing Zones endpoint (must come before :id route)
+  app.get("/api/fishing-zones/potential", async (req, res) => {
+    try {
+      const { lat, lon, radius } = req.query;
+      
+      if (!lat || !lon) {
+        return res.status(400).json({ error: "Latitude and longitude are required" });
+      }
+
+      const fishingZones = await oceanographicService.calculatePotentialFishingZones(
+        parseFloat(lat as string),
+        parseFloat(lon as string),
+        radius ? parseFloat(radius as string) : 50
+      );
+
+      res.json(fishingZones);
+    } catch (error) {
+      console.error('Potential fishing zones error:', error);
+      res.status(500).json({ error: "Failed to calculate potential fishing zones" });
     }
   });
 
@@ -233,6 +258,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Translation error:', error);
       res.status(500).json({ error: "Failed to translate message" });
+    }
+  });
+
+  // Oceanographic data endpoint
+  app.get("/api/oceanographic/data", async (req, res) => {
+    try {
+      const { lat, lon } = req.query;
+      
+      if (!lat || !lon) {
+        return res.status(400).json({ error: "Latitude and longitude are required" });
+      }
+
+      const oceanData = await oceanographicService.getOceanographicData(
+        parseFloat(lat as string),
+        parseFloat(lon as string)
+      );
+
+      res.json(oceanData);
+    } catch (error) {
+      console.error('Oceanographic data error:', error);
+      res.status(500).json({ error: "Failed to fetch oceanographic data" });
     }
   });
 

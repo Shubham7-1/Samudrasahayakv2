@@ -8,6 +8,7 @@ import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { ChatbotSidebar } from "@/components/layout/chatbot-sidebar";
 import { Button } from "@/components/ui/button";
+import { PotentialFishingZones } from "@/components/fishing/potential-fishing-zones";
 import { Home } from "@/pages/home";
 import { Map } from "@/pages/map";
 import { Weather } from "@/pages/weather";
@@ -138,6 +139,9 @@ function Router() {
               onNavigate={handleNavigate}
               language={language}
             />
+
+            {/* Potential Fishing Zones Feature */}
+            <PotentialFishingZones />
 
             {/* Floating Chat Button */}
             <Button
