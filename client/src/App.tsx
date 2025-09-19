@@ -31,6 +31,7 @@ function Router() {
   const [userId] = useState("user-" + Date.now()); // Simple user ID for demo
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [location, setLocation] = useLocation();
+  const [selectedFishingZone, setSelectedFishingZone] = useState(null);
 
   const { latitude, longitude, requestPermission } = useGeolocation();
   const lat = latitude || DEFAULT_LOCATION.lat;
@@ -84,6 +85,11 @@ function Router() {
     setCurrentPage(page);
   };
 
+  const handleZoneSelect = (zone: any) => {
+    setSelectedFishingZone(zone);
+    setCurrentPage('map'); // Navigate to map when zone is selected
+  };
+
 
   const currentLocation = weatherData?.weather?.location || DEFAULT_LOCATION.name;
 
@@ -92,7 +98,7 @@ function Router() {
       case 'home':
         return <Home onNavigate={handleNavigate} />;
       case 'map':
-        return <Map />;
+        return <Map selectedZone={selectedFishingZone} onClearZone={() => setSelectedFishingZone(null)} />;
       case 'weather':
         return <Weather />;
       case 'catch':
@@ -141,7 +147,7 @@ function Router() {
             />
 
             {/* Potential Fishing Zones Feature */}
-            <PotentialFishingZones />
+            <PotentialFishingZones onZoneSelect={handleZoneSelect} />
 
             {/* Floating Chat Button */}
             <Button

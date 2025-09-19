@@ -51,7 +51,12 @@ function FlyToLocation({ lat, lon }: { lat?: number; lon?: number }) {
   return null;
 }
 
-export function EnhancedMap() {
+interface EnhancedMapProps {
+  selectedZone?: any;
+  onClearZone?: () => void;
+}
+
+export function EnhancedMap({ selectedZone: selectedFishingZone, onClearZone }: EnhancedMapProps = {}) {
   const { latitude, longitude, error } = useGeolocation();
   const [selectedZone, setSelectedZone] = useState<any>(null);
   const [borderAlert, setBorderAlert] = useState<BorderZone | null>(null);
@@ -94,6 +99,13 @@ export function EnhancedMap() {
       });
     }
   }, [latitude, longitude]);
+
+  // Auto-center map on selected PFZ
+  useEffect(() => {
+    if (selectedFishingZone && selectedFishingZone.coordinates) {
+      setSelectedZone(selectedFishingZone);
+    }
+  }, [selectedFishingZone]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
@@ -199,6 +211,23 @@ export function EnhancedMap() {
 
               ))
             }
+
+            {/* Selected Fishing Zone from PFZ Feature */}
+            {selectedFishingZone && (
+              <Marker
+                position={[selectedFishingZone.coordinates.lat, selectedFishingZone.coordinates.lon]}
+                eventHandlers={{ click: () => setSelectedZone(selectedFishingZone) }}
+              >
+                <Popup>
+                  <div className="text-sm">
+                    <strong>{selectedFishingZone.name}</strong><br />
+                    <span className="text-blue-600">🐟 PFZ: {selectedFishingZone.suitabilityScore}%</span><br />
+                    <span className="text-green-600">🌡️ {selectedFishingZone.temperature?.toFixed(1) || '—'}°C</span><br />
+                    <span className="text-orange-600">🎯 {selectedFishingZone.conditions}</span>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
           </MapContainer>
         </CardContent>
       </Card>
@@ -210,20 +239,56 @@ export function EnhancedMap() {
             <CardTitle>Zone Details: {selectedZone.name}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Safety Rating</p>
-                <p className="font-semibold">{selectedZone.safetyRating}/10</p>
+            {selectedZone.safetyRating ? (
+              // Regular fishing zone
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Safety Rating</p>
+                  <p className="font-semibold">{selectedZone.safetyRating}/10</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Fish Types</p>
+                  <p className="font-semibold">{selectedZone.fishTypes?.length || 0} available</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Fish Types</p>
-                <p className="font-semibold">{selectedZone.fishTypes?.length || 0} available</p>
+            ) : (
+              // PFZ zone
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Suitability Score</p>
+                    <p className="font-semibold text-blue-600">{selectedZone.suitabilityScore}%</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Temperature</p>
+                    <p className="font-semibold text-green-600">{selectedZone.temperature?.toFixed(1) || '—'}°C</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Fish Species</p>
+                  <p className="font-semibold">{selectedZone.fishSpecies?.join(', ')}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Best Fishing Times</p>
+                  <p className="font-semibold">{selectedZone.bestFishingTimes?.[0]}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Conditions</p>
+                  <Badge className="mt-1">{selectedZone.conditions}</Badge>
+                </div>
               </div>
+            )}
+            <div className="flex gap-2 mt-4">
+              <Button className="flex-1" onClick={() => setSelectedZone(null)}>
+                <i className="fas fa-route mr-2" />
+                Navigate to Zone
+              </Button>
+              {selectedFishingZone && onClearZone && (
+                <Button variant="outline" onClick={() => { setSelectedZone(null); onClearZone(); }}>
+                  Clear PFZ
+                </Button>
+              )}
             </div>
-            <Button className="w-full mt-4" onClick={() => setSelectedZone(null)}>
-              <i className="fas fa-route mr-2" />
-              Navigate to Zone
-            </Button>
           </CardContent>
         </Card>
       )}
