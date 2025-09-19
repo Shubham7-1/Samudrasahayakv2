@@ -62,7 +62,7 @@ export function EnhancedMap({ selectedZone: selectedFishingZone, onClearZone }: 
   const [borderAlert, setBorderAlert] = useState<BorderZone | null>(null);
 
   // Fishing zones query
-  const { data: fishingZones } = useQuery({
+  const { data: fishingZones } = useQuery<any[]>({
     queryKey: ['/api/fishing-zones'],
   });
 
@@ -177,7 +177,6 @@ export function EnhancedMap({ selectedZone: selectedFishingZone, onClearZone }: 
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="&copy; OpenStreetMap contributors"
             />
 
             {latitude && longitude && (

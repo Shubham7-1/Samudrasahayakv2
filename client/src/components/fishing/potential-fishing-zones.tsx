@@ -37,7 +37,7 @@ export function PotentialFishingZones({ onZoneSelect }: PFZProps) {
   const queryLat = useCustomLocation && customLat ? parseFloat(customLat) : latitude;
   const queryLon = useCustomLocation && customLon ? parseFloat(customLon) : longitude;
 
-  const { data: fishingZones, isLoading, error, refetch } = useQuery({
+  const { data: fishingZones, isLoading, error, refetch } = useQuery<FishingZone[]>({
     queryKey: ['/api/fishing-zones/potential', queryLat, queryLon],
     enabled: !!(queryLat && queryLon),
   });
@@ -178,7 +178,7 @@ export function PotentialFishingZones({ onZoneSelect }: PFZProps) {
         {fishingZones && Array.isArray(fishingZones) && fishingZones.length > 0 && (
           <div className="space-y-2">
             {isExpanded ? (
-              (fishingZones as FishingZone[]).slice(0, 5).map((zone: FishingZone) => (
+              fishingZones.slice(0, 5).map((zone: FishingZone) => (
                 <Card key={zone.id} className="border cursor-pointer hover:shadow-md transition-shadow"
                       onClick={() => onZoneSelect?.(zone)}>
                   <CardContent className="p-3">
@@ -213,16 +213,16 @@ export function PotentialFishingZones({ onZoneSelect }: PFZProps) {
               // Collapsed view - show top zone only
               <div className="space-y-2">
                 <div className="text-xs font-medium text-muted-foreground">Best Zone Found:</div>
-                {(fishingZones as FishingZone[])[0] && (
+                {fishingZones[0] && (
                   <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-950 rounded">
                     <div>
-                      <div className="font-medium text-sm">{((fishingZones as FishingZone[])[0]).name}</div>
+                      <div className="font-medium text-sm">{fishingZones[0].name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {((fishingZones as FishingZone[])[0]).temperature.toFixed(1)}°C • {((fishingZones as FishingZone[])[0]).conditions}
+                        {fishingZones[0].temperature.toFixed(1)}°C • {fishingZones[0].conditions}
                       </div>
                     </div>
-                    <Badge className={`text-xs ${getScoreColor(((fishingZones as FishingZone[])[0]).suitabilityScore)}`}>
-                      {((fishingZones as FishingZone[])[0]).suitabilityScore}%
+                    <Badge className={`text-xs ${getScoreColor(fishingZones[0].suitabilityScore)}`}>
+                      {fishingZones[0].suitabilityScore}%
                     </Badge>
                   </div>
                 )}
