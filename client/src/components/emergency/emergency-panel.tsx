@@ -20,8 +20,32 @@ export function EmergencyPanel({ currentLocation, distanceFromBorder = 15, userI
   const [activeAlert, setActiveAlert] = useState<any>(null);
   const [nearbyPeers, setNearbyPeers] = useState<number>(0);
   const [escalationTimer, setEscalationTimer] = useState<number>(0);
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [isOfflineMode, setIsOfflineMode] = useState(!navigator.onLine);
   const { toast } = useToast();
+
+  // Offline Detection
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOfflineMode(false);
+      console.log('Back online - Smart SOS connected');
+    };
+    
+    const handleOffline = () => {
+      setIsOfflineMode(true);
+      console.log('Gone offline - Smart SOS will use local mode');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial check
+    setIsOfflineMode(!navigator.onLine);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Smart SOS System Functions
   useEffect(() => {
@@ -172,45 +196,94 @@ export function EmergencyPanel({ currentLocation, distanceFromBorder = 15, userI
 
   const handleOfflineSOS = () => {
     setIsEmergencyActive(true);
-    setEmergencyTimer(30);
+    setEmergencyTimer(120); // Longer timer for offline mode
+    setSosCount(prev => prev + 1);
     
     const emergencyMessage = `🆘 OFFLINE EMERGENCY SOS #${sosCount + 1} 🆘\n` +
-      `Fisherman in distress!\n` +
-      `Location: ${currentLocation ? `${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}` : 'Unknown'}\n` +
-      `Distance from border: ${distanceFromBorder.toFixed(1)}km\n` +
-      `Time: ${new Date().toLocaleString()}\n` +
-      `OFFLINE MODE - Please manually contact authorities!`;
+      `🚨 FISHERMAN IN DISTRESS - URGENT HELP NEEDED 🚨\n` +
+      `📍 GPS Location: ${currentLocation ? `${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}` : 'GPS unavailable - check device location'}\n` +
+      `🌊 Distance from border: ${distanceFromBorder.toFixed(1)}km\n` +
+      `⏰ Emergency Time: ${new Date().toLocaleString()}\n` +
+      `📶 Status: OFFLINE MODE - No internet connection\n` +
+      `📞 CALL COAST GUARD 1554 IMMEDIATELY!\n` +
+      `📞 Backup: Indian Navy 1024\n` +
+      `📞 Emergency Services: 112\\n` +
+      `\\n🗺️ Google Maps: ${currentLocation ? `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}` : 'Location not available'}`;
 
-    // Start countdown timer
+    // Set up offline timer
     const interval = setInterval(() => {
       setEmergencyTimer(prev => {
         if (prev <= 1) {
           clearInterval(interval);
-          setIsEmergencyActive(false);
-          return 0;
+          // Keep emergency active in offline mode
+          setEmergencyTimer(999); // Keep counting
+          return 999;
         }
         return prev - 1;
       });
     }, 1000);
 
-    // Try to share via native sharing or clipboard
-    if (navigator.share && currentLocation) {
-      navigator.share({
-        title: '🆘 OFFLINE EMERGENCY - Fisherman in Distress',
-        text: emergencyMessage,
-        url: `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}`
-      }).catch(() => {
-        navigator.clipboard.writeText(emergencyMessage);
-      });
-    } else {
-      navigator.clipboard.writeText(emergencyMessage);
-    }
+    // Try multiple sharing methods for offline mode
+    const shareEmergency = async () => {
+      try {
+        // First try native sharing
+        if (navigator.share && currentLocation) {
+          await navigator.share({
+            title: '🆘 OFFLINE EMERGENCY - Fisherman in Distress',
+            text: emergencyMessage,
+            url: currentLocation ? `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}` : undefined
+          });
+          return true;
+        }
+      } catch (shareError) {
+        console.log('Native sharing failed, trying clipboard');
+      }
 
-    toast({
-      title: "🆘 Offline SOS Activated",
-      description: "Emergency details saved to clipboard. Manually contact Coast Guard 1554!",
-      variant: "destructive"
+      try {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(emergencyMessage);
+        return true;
+      } catch (clipboardError) {
+        console.log('Clipboard failed, trying selection');
+      }
+
+      // Last resort - create text selection
+      const textArea = document.createElement('textarea');
+      textArea.value = emergencyMessage;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      return true;
+    };
+
+    shareEmergency().then(() => {
+      toast({
+        title: "🆘 Offline SOS Activated",
+        description: "Emergency details copied! Share with anyone nearby. Call Coast Guard 1554 immediately!",
+        variant: "destructive"
+      });
+    }).catch(() => {
+      toast({
+        title: "🆘 Offline Emergency Active",
+        description: "SOS is active! Use any available communication to contact authorities. Coast Guard: 1554",
+        variant: "destructive"
+      });
     });
+
+    // Try to save to local storage for persistence
+    try {
+      const emergencyData = {
+        id: Date.now(),
+        message: emergencyMessage,
+        location: currentLocation,
+        timestamp: new Date().toISOString(),
+        status: 'active'
+      };
+      localStorage.setItem('emergency_sos_active', JSON.stringify(emergencyData));
+    } catch (storageError) {
+      console.log('Could not save to local storage');
+    }
   };
 
   const handleCancelSOS = async () => {
@@ -337,23 +410,42 @@ export function EmergencyPanel({ currentLocation, distanceFromBorder = 15, userI
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <Button
-            onClick={handleSOS}
-            className={`bg-white bg-opacity-20 backdrop-blur hover:bg-opacity-30 transition-all h-auto p-3 flex flex-col items-center ${
-              isEmergencyActive ? 'animate-pulse bg-red-600 bg-opacity-90' : ''
-            }`}
-            data-testid="button-sos"
-          >
-            <i className={`${isEmergencyActive ? 'fas fa-exclamation-triangle' : 'fas fa-phone'} text-2xl mb-2`} />
-            <div className="text-sm font-medium">
-              {isEmergencyActive ? (activeAlert ? 'Cancel SOS' : 'SOS Active!') : 'Smart SOS'}
-            </div>
-            {escalationTimer > 0 && (
-              <div className="text-xs mt-1 bg-red-700 bg-opacity-50 px-2 py-1 rounded">
-                Escalation: {escalationTimer}s
+          {!isEmergencyActive ? (
+            <Button
+              onClick={handleSOS}
+              className="bg-white bg-opacity-20 backdrop-blur hover:bg-opacity-30 transition-all h-auto p-3 flex flex-col items-center"
+              data-testid="button-sos"
+            >
+              <i className="fas fa-phone text-2xl mb-2" />
+              <div className="text-sm font-medium">
+                {isOfflineMode ? 'Offline SOS' : 'Smart SOS'}
               </div>
-            )}
-          </Button>
+              {isOfflineMode && (
+                <div className="text-xs mt-1 bg-orange-600 bg-opacity-50 px-2 py-1 rounded">
+                  Offline Mode
+                </div>
+              )}
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setShowConfirmation(true)}
+              className="bg-red-600 bg-opacity-90 backdrop-blur hover:bg-red-700 transition-all h-auto p-3 flex flex-col items-center animate-pulse"
+              data-testid="button-cancel-sos"
+            >
+              <i className="fas fa-times text-2xl mb-2" />
+              <div className="text-sm font-medium">CANCEL SOS</div>
+              {escalationTimer > 0 && (
+                <div className="text-xs mt-1 bg-red-800 bg-opacity-50 px-2 py-1 rounded">
+                  Escalation: {escalationTimer}s
+                </div>
+              )}
+              {isOfflineMode && (
+                <div className="text-xs mt-1 bg-orange-600 bg-opacity-50 px-2 py-1 rounded">
+                  Offline Mode
+                </div>
+              )}
+            </Button>
+          )}
           
           <Button
             onClick={handleShareLocation}
