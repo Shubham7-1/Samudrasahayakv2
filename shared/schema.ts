@@ -62,6 +62,40 @@ export const chatMessages = pgTable("chat_messages", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+// Smart SOS System Tables
+export const userLocations = pgTable("user_locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  latitude: real("latitude").notNull(),
+  longitude: real("longitude").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  isOnline: integer("is_online").default(1), // 1 for online, 0 for offline
+});
+
+export const activeAlerts = pgTable("active_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  latitude: real("latitude").notNull(),
+  longitude: real("longitude").notNull(),
+  status: text("status").notNull(), // 'pending', 'p2p-alerted', 'escalated', 'resolved', 'canceled'
+  nearbyPeersNotified: jsonb("nearby_peers_notified").default([]),
+  emergencyMessage: text("emergency_message"),
+  distanceFromBorder: real("distance_from_border"),
+  escalationTimestamp: timestamp("escalation_timestamp"),
+  resolvedTimestamp: timestamp("resolved_timestamp"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const emergencyContacts = pgTable("emergency_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  name: text("name").notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  relationship: text("relationship"), // 'family', 'friend', 'authority', 'coast_guard'
+  priority: integer("priority").default(1), // 1 = highest priority
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -89,6 +123,21 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   timestamp: true,
 });
 
+export const insertUserLocationSchema = createInsertSchema(userLocations).omit({
+  id: true,
+  lastUpdated: true,
+});
+
+export const insertActiveAlertSchema = createInsertSchema(activeAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertEmergencyContactSchema = createInsertSchema(emergencyContacts).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type WeatherData = typeof weatherData.$inferSelect;
@@ -99,3 +148,9 @@ export type CatchLog = typeof catchLogs.$inferSelect;
 export type InsertCatchLog = z.infer<typeof insertCatchLogSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type UserLocation = typeof userLocations.$inferSelect;
+export type InsertUserLocation = z.infer<typeof insertUserLocationSchema>;
+export type ActiveAlert = typeof activeAlerts.$inferSelect;
+export type InsertActiveAlert = z.infer<typeof insertActiveAlertSchema>;
+export type EmergencyContact = typeof emergencyContacts.$inferSelect;
+export type InsertEmergencyContact = z.infer<typeof insertEmergencyContactSchema>;

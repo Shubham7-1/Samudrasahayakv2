@@ -8,7 +8,13 @@ import {
   type CatchLog,
   type InsertCatchLog,
   type ChatMessage,
-  type InsertChatMessage
+  type InsertChatMessage,
+  type UserLocation,
+  type InsertUserLocation,
+  type ActiveAlert,
+  type InsertActiveAlert,
+  type EmergencyContact,
+  type InsertEmergencyContact
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -37,6 +43,24 @@ export interface IStorage {
   // Chat messages
   getChatMessages(userId: string): Promise<ChatMessage[]>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+
+  // Smart SOS System operations
+  // Location tracking
+  updateUserLocation(location: InsertUserLocation): Promise<UserLocation>;
+  getUserLocation(userId: string): Promise<UserLocation | undefined>;
+  getNearbyUsers(latitude: number, longitude: number, radiusKm?: number): Promise<UserLocation[]>;
+  
+  // SOS Alerts
+  createSOSAlert(alert: InsertActiveAlert): Promise<ActiveAlert>;
+  getActiveAlert(userId: string): Promise<ActiveAlert | undefined>;
+  getActiveAlertById(alertId: string): Promise<ActiveAlert | undefined>;
+  updateAlertStatus(alertId: string, status: string, escalationTimestamp?: Date): Promise<ActiveAlert | undefined>;
+  cancelAlert(alertId: string): Promise<boolean>;
+  
+  // Emergency Contacts
+  getEmergencyContacts(userId: string): Promise<EmergencyContact[]>;
+  createEmergencyContact(contact: InsertEmergencyContact): Promise<EmergencyContact>;
+  deleteEmergencyContact(contactId: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -45,6 +69,9 @@ export class MemStorage implements IStorage {
   private fishingZones: Map<string, FishingZone>;
   private catchLogs: Map<string, CatchLog>;
   private chatMessages: Map<string, ChatMessage>;
+  private userLocations: Map<string, UserLocation>;
+  private activeAlerts: Map<string, ActiveAlert>;
+  private emergencyContacts: Map<string, EmergencyContact>;
 
   constructor() {
     this.users = new Map();
@@ -52,6 +79,9 @@ export class MemStorage implements IStorage {
     this.fishingZones = new Map();
     this.catchLogs = new Map();
     this.chatMessages = new Map();
+    this.userLocations = new Map();
+    this.activeAlerts = new Map();
+    this.emergencyContacts = new Map();
 
     // Initialize with some default fishing zones
     this.initializeDefaultData();
@@ -308,6 +338,140 @@ export class MemStorage implements IStorage {
     };
     this.chatMessages.set(id, message);
     return message;
+  }
+
+  // Smart SOS System Methods
+
+  async updateUserLocation(insertLocation: InsertUserLocation): Promise<UserLocation> {
+    const existingLocation = Array.from(this.userLocations.values())
+      .find(loc => loc.userId === insertLocation.userId);
+    
+    let location: UserLocation;
+    if (existingLocation) {
+      location = {
+        ...existingLocation,
+        latitude: insertLocation.latitude,
+        longitude: insertLocation.longitude,
+        isOnline: insertLocation.isOnline ?? 1,
+        lastUpdated: new Date()
+      };
+      this.userLocations.set(existingLocation.id, location);
+    } else {
+      const id = randomUUID();
+      location = {
+        ...insertLocation,
+        id,
+        lastUpdated: new Date(),
+        isOnline: insertLocation.isOnline ?? 1
+      };
+      this.userLocations.set(id, location);
+    }
+    return location;
+  }
+
+  async getUserLocation(userId: string): Promise<UserLocation | undefined> {
+    return Array.from(this.userLocations.values())
+      .find(location => location.userId === userId);
+  }
+
+  async getNearbyUsers(latitude: number, longitude: number, radiusKm = 15): Promise<UserLocation[]> {
+    return Array.from(this.userLocations.values()).filter(location => {
+      // Calculate distance using Haversine formula
+      const R = 6371; // Earth's radius in kilometers
+      const dLat = (location.latitude - latitude) * Math.PI / 180;
+      const dLon = (location.longitude - longitude) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(latitude * Math.PI / 180) * Math.cos(location.latitude * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const distance = R * c;
+      
+      return distance <= radiusKm && location.isOnline === 1;
+    });
+  }
+
+  async createSOSAlert(insertAlert: InsertActiveAlert): Promise<ActiveAlert> {
+    const id = randomUUID();
+    const alert: ActiveAlert = {
+      ...insertAlert,
+      id,
+      nearbyPeersNotified: insertAlert.nearbyPeersNotified || [],
+      emergencyMessage: insertAlert.emergencyMessage || null,
+      distanceFromBorder: insertAlert.distanceFromBorder || null,
+      escalationTimestamp: insertAlert.escalationTimestamp || null,
+      resolvedTimestamp: insertAlert.resolvedTimestamp || null,
+      createdAt: new Date()
+    };
+    this.activeAlerts.set(id, alert);
+    return alert;
+  }
+
+  async getActiveAlert(userId: string): Promise<ActiveAlert | undefined> {
+    return Array.from(this.activeAlerts.values())
+      .find(alert => alert.userId === userId && 
+        ['pending', 'p2p-alerted', 'escalated'].includes(alert.status));
+  }
+
+  async getActiveAlertById(alertId: string): Promise<ActiveAlert | undefined> {
+    return this.activeAlerts.get(alertId);
+  }
+
+  async updateAlertStatus(alertId: string, status: string, escalationTimestamp?: Date): Promise<ActiveAlert | undefined> {
+    const alert = this.activeAlerts.get(alertId);
+    if (!alert) return undefined;
+
+    const updatedAlert: ActiveAlert = {
+      ...alert,
+      status,
+      escalationTimestamp: escalationTimestamp || alert.escalationTimestamp,
+      resolvedTimestamp: status === 'resolved' || status === 'canceled' ? new Date() : alert.resolvedTimestamp
+    };
+    
+    this.activeAlerts.set(alertId, updatedAlert);
+    return updatedAlert;
+  }
+
+  async cancelAlert(alertId: string): Promise<boolean> {
+    const alert = this.activeAlerts.get(alertId);
+    if (!alert) return false;
+
+    const updatedAlert: ActiveAlert = {
+      ...alert,
+      status: 'canceled',
+      resolvedTimestamp: new Date()
+    };
+    
+    this.activeAlerts.set(alertId, updatedAlert);
+    return true;
+  }
+
+  async getEmergencyContacts(userId: string): Promise<EmergencyContact[]> {
+    return Array.from(this.emergencyContacts.values())
+      .filter(contact => contact.userId === userId)
+      .sort((a, b) => (a.priority || 1) - (b.priority || 1));
+  }
+
+  async createEmergencyContact(insertContact: InsertEmergencyContact): Promise<EmergencyContact> {
+    const id = randomUUID();
+    const contact: EmergencyContact = {
+      ...insertContact,
+      id,
+      relationship: insertContact.relationship || null,
+      priority: insertContact.priority || 1,
+      createdAt: new Date()
+    };
+    this.emergencyContacts.set(id, contact);
+    return contact;
+  }
+
+  async deleteEmergencyContact(contactId: string): Promise<boolean> {
+    const exists = this.emergencyContacts.has(contactId);
+    if (exists) {
+      this.emergencyContacts.delete(contactId);
+      return true;
+    }
+    return false;
   }
 }
 

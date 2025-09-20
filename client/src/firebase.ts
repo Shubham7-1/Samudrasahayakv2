@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getDatabase } from "firebase/database";
 
 // Check if all required env variables are present
 const {
@@ -28,6 +29,7 @@ const firebaseConfig = {
   storageBucket: VITE_FIREBASE_STORAGE_BUCKET || "",
   messagingSenderId: VITE_FIREBASE_MESSAGING_SENDER_ID || "",
   appId: VITE_FIREBASE_APP_ID || "",
+  databaseURL: `https://${VITE_FIREBASE_PROJECT_ID || "samudra-sahayak"}-default-rtdb.firebaseio.com/`
 };
 
 // Initialize Firebase with error handling
@@ -35,12 +37,14 @@ let app;
 let auth;
 let db;
 let storage;
+let realtimeDb;
 
 try {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
+  realtimeDb = getDatabase(app);
 
   // Enable offline support
   enableIndexedDbPersistence(db).catch((err) => {
@@ -56,4 +60,4 @@ try {
 }
 
 // Export services
-export { auth, db, storage };
+export { auth, db, storage, realtimeDb };

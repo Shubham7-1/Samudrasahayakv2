@@ -1,0 +1,68 @@
+Build the Smart SOS System
+"You are an expert full-stack developer. Your task is to upgrade an existing React-based SOS feature for a fisherman's app called 'Samudra Sahayak' into a 'Smart SOS System.'
+
+The system must be real-time and include peer-to-peer (P2P) alerts, an emergency verification step, and escalation to authorities.
+
+Here is the existing frontend code for the EmergencyPanel component that needs to be updated:
+
+JavaScript
+
+// [Existing EmergencyPanel.tsx code from the previous turn]
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+// ... (paste the full component code here)
+Now, follow these steps to build the complete solution:
+
+1. Set up the Backend and Real-Time Database
+
+Create a new Node.js + Express backend.
+
+Set up a Firebase Realtime Database to store user locations and SOS alert statuses in real-time. The database should have two main collections:
+
+user_locations: Stores the last known latitude and longitude for each userId.
+
+active_alerts: Stores details of any active SOS alert, including the userId, location, timestamp, status ('p2p-alerted', 'escalated'), and a list of nearby_peers_notified.
+
+2. Create the Backend API Endpoints
+
+Create the following API endpoints in your Express app:
+
+POST /api/location/update: This endpoint allows the app to periodically send the fisherman's current location to the backend, which then updates the user_locations database.
+
+POST /api/sos/trigger: This is the main endpoint for the Smart SOS system. When a user confirms an SOS, the frontend will call this endpoint.
+
+3. Implement the Smart SOS Logic on the Backend
+
+When the /api/sos/trigger endpoint is called, implement the following logic:
+
+Log the Alert: Create a new entry in the active_alerts database with the initial status.
+
+Find Nearby Peers (P2P Logic):
+
+Query the user_locations database to find all other users within a 15km radius of the distressed user's location. This requires a geospatial calculation.
+
+For each nearby peer found, simulate sending a real-time alert (for the hackathon, a console log like "Notifying peer [peerId] about emergency" is sufficient). Update the nearby_peers_notified list in the active_alerts entry.
+
+Implement Escalation Logic:
+
+After the P2P alerts are sent, start a 90-second timer on the server using setTimeout.
+
+If the alert is not canceled by the user within this time, execute the escalation.
+
+Escalation Action: Update the alert's status to 'escalated' in the database. Then, simulate contacting authorities by sending an email using Nodemailer or logging a detailed message like "ESCALATING ALERT: Contacting Coast Guard for user [userId] at location [lat, lon].".
+
+POST /api/sos/cancel: Create this endpoint to allow the user to cancel an active SOS, which would clear the escalation timer and update the alert's status to 'canceled'.
+
+4. Update the Frontend React Component
+
+Modify the provided EmergencyPanel.tsx component to include the verification flow and integrate with the new backend.
+
+Add State for Verification: Introduce a useState variable showConfirmation to manage the visibility of a confirmation modal.
+
+Modify handleSOS: Change this function so that it only sets showConfirmation(true).
+
+Create a Confirmation Modal: Build a new UI component that appears when showConfirmation is true. This modal should display a warning and have two buttons: "Confirm SOS" and "Cancel."
+
+Create handleConfirmSOS: This new function is called when the "Confirm SOS" button is clicked. It should make a fetch call to your POST /api/sos/trigger backend endpoint.
+
+Implement Cancellation: The "Cancel" button should call a handleCancelSOS function that sets showConfirmation(false) and calls the /api/sos/cancel endpoint if the alert was already triggered.
