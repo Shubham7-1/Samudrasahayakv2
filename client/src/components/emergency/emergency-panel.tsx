@@ -23,7 +23,7 @@ export function EmergencyPanel({ currentLocation, distanceFromBorder = 15, userI
   const [isOfflineMode, setIsOfflineMode] = useState(!navigator.onLine);
   const { toast } = useToast();
 
-  // Offline Detection
+  // Offline Detection and State Restoration
   useEffect(() => {
     const handleOnline = () => {
       setIsOfflineMode(false);
@@ -35,11 +35,37 @@ export function EmergencyPanel({ currentLocation, distanceFromBorder = 15, userI
       console.log('Gone offline - Smart SOS will use local mode');
     };
 
+    // Restore offline emergency state on app load
+    const restoreEmergencyState = () => {
+      try {
+        const savedEmergency = localStorage.getItem('emergency_sos_active');
+        if (savedEmergency) {
+          const emergencyData = JSON.parse(savedEmergency);
+          if (emergencyData.status === 'active') {
+            const timeSinceEmergency = Date.now() - new Date(emergencyData.timestamp).getTime();
+            const remainingTime = Math.max(0, 120000 - timeSinceEmergency); // 2 minutes max
+            
+            if (remainingTime > 0) {
+              setIsEmergencyActive(true);
+              setEmergencyTimer(Math.floor(remainingTime / 1000));
+              console.log('Restored offline emergency state');
+            } else {
+              // Emergency expired, clean up
+              localStorage.removeItem('emergency_sos_active');
+            }
+          }
+        }
+      } catch (error) {
+        console.log('Could not restore emergency state:', error);
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     // Initial check
     setIsOfflineMode(!navigator.onLine);
+    restoreEmergencyState();
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -146,13 +172,14 @@ export function EmergencyPanel({ currentLocation, distanceFromBorder = 15, userI
 
     try {
       setShowConfirmation(false);
-      setSosCount(prev => prev + 1);
-
+      
       if (isOfflineMode) {
         // Offline mode fallback
         handleOfflineSOS();
         return;
       }
+
+      setSosCount(prev => prev + 1);
 
       const response = await fetch('/api/sos/trigger', {
         method: 'POST',
@@ -207,8 +234,8 @@ export function EmergencyPanel({ currentLocation, distanceFromBorder = 15, userI
       `📶 Status: OFFLINE MODE - No internet connection\n` +
       `📞 CALL COAST GUARD 1554 IMMEDIATELY!\n` +
       `📞 Backup: Indian Navy 1024\n` +
-      `📞 Emergency Services: 112\\n` +
-      `\\n🗺️ Google Maps: ${currentLocation ? `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}` : 'Location not available'}`;
+      `📞 Emergency Services: 112\n` +
+      `\n🗺️ Google Maps: ${currentLocation ? `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}` : 'Location not available'}`;
 
     // Set up offline timer
     const interval = setInterval(() => {
@@ -302,11 +329,19 @@ export function EmergencyPanel({ currentLocation, distanceFromBorder = 15, userI
         if (!response.ok) throw new Error('Failed to cancel SOS');
       }
 
+      // Clear all emergency state
       setIsEmergencyActive(false);
       setActiveAlert(null);
       setEscalationTimer(0);
       setEmergencyTimer(0);
       setNearbyPeers(0);
+
+      // Clear localStorage for offline persistence
+      try {
+        localStorage.removeItem('emergency_sos_active');
+      } catch (storageError) {
+        console.log('Could not clear localStorage');
+      }
 
       toast({
         title: "✅ SOS Canceled",
@@ -324,6 +359,8 @@ export function EmergencyPanel({ currentLocation, distanceFromBorder = 15, userI
       setIsEmergencyActive(false);
       setActiveAlert(null);
       setEscalationTimer(0);
+      setEmergencyTimer(0);
+      localStorage.removeItem('emergency_sos_active');
     }
   };
 
@@ -428,7 +465,7 @@ export function EmergencyPanel({ currentLocation, distanceFromBorder = 15, userI
             </Button>
           ) : (
             <Button
-              onClick={() => setShowConfirmation(true)}
+              onClick={isOfflineMode ? handleCancelSOS : () => setShowConfirmation(true)}
               className="bg-red-600 bg-opacity-90 backdrop-blur hover:bg-red-700 transition-all h-auto p-3 flex flex-col items-center animate-pulse"
               data-testid="button-cancel-sos"
             >
